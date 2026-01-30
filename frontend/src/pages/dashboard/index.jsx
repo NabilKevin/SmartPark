@@ -1,0 +1,6 @@
+export { default as UsersDashboard } from './Users'
+export { default as Dashboard } from './Dashboard'
+export { default as ParkingLotsDashboard } from './ParkingLot'
+export { default as ParkingSpotsDashboard } from './ParkingSpot'
+export { default as BookingsDashboard } from './Bookings'
+export { default as ProfileDashboard } from './Profile'

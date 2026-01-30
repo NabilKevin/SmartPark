@@ -1,0 +1,6 @@
+export { default as CustomAlert } from './CustomAlert'
+export { default as Modal } from './Modal'
+export { default as CustomPagination } from './CustomPagination'
+export { default as Loading } from './Loading'
+export * from './dashboard'
+export * from './user'
