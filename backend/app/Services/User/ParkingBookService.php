@@ -12,75 +12,119 @@ use RuntimeException;
 
 class ParkingBookService
 {
-  public function createParkingBook($data)
-  {
-    $user_id = Auth::id();
+    public function createParkingBook(array $data)
+    {
+        $userId = Auth::id();
 
-    $parkingSpot = ParkingSpot::findOrFail($data['parking_spot_id']);
-    $parkingLot = ParkingLot::findOrFail($parkingSpot->parking_lot_id);
+        $parkingSpot = ParkingSpot::findOrFail($data['parking_spot_id']);
+        $parkingLot  = ParkingLot::findOrFail($parkingSpot->parking_lot_id);
 
-    if ($parkingSpot->status !== 'available') {
-      throw new RuntimeException('Parking spot is not available');
+        if ($parkingSpot->status !== 'available') {
+            throw new RuntimeException('Parking spot is not available');
+        }
+
+        if ($data['type'] === 'walk_in') {
+            return $this->handleWalkIn($data, $userId, $parkingSpot, $parkingLot);
+        }
+
+        return $this->handleBooking($data, $userId, $parkingSpot, $parkingLot);
     }
 
-    if($data['type'] === 'walk_in') {
-      $parkingBook = ParkingBook::whereDate('start_at', Carbon::today()->toDateString())->orWhereDate('checkin_at', Carbon::today()->toDateString())->where('user_id', $user_id)->whereIn('status', ['booked', 'active'])->first();
-      if($parkingBook) {
-        throw new RuntimeException('You already booked or park today!');
-      }
+    private function handleWalkIn($data, $userId, $parkingSpot, $parkingLot)
+    {
+        $today = Carbon::today();
 
-      $data['checkin_at'] = Carbon::now();
-      $data['status'] = 'active';
-      $parkingSpot->update(['status' => 'occupied']);
-    } else {
-      $parkingBook = ParkingBook::where('user_id', $user_id)->whereIn('status', ['booked', 'active'])->whereDate('start_at', Carbon::parse($data['start_at'])->toDateString())->first();
-      if($parkingBook) {
-        throw new RuntimeException('You already booked on that day!');
-      }
+        $alreadyBooked = ParkingBook::where('user_id', $userId)
+            ->whereIn('status', ['booked', 'active'])
+            ->where(function ($q) use ($today) {
+                $q->whereDate('start_at', $today)
+                  ->orWhereDate('checkin_at', $today);
+            })
+            ->exists();
 
-      $data['status'] = 'booked';
-      $data['expired_at'] = Carbon::parse($data['start_at'])->addMinutes(20);
-      $parkingSpot->update(['status' => 'reserved']);
+        if ($alreadyBooked) {
+            throw new RuntimeException('You already booked or parked today!');
+        }
+
+        $parkingSpot->update(['status' => 'occupied']);
+        $parkingLot->decrement('available_spots');
+
+        return ParkingBook::create([
+            ...$data,
+            'user_id'    => $userId,
+            'booked_by'  => $userId,
+            'booked_at'  => now(),
+            'checkin_at' => now(),
+            'status'     => 'active',
+        ]);
     }
 
-    $parkingLot->update(['available_spots' => $parkingLot->available_spots - 1]);
+    private function handleBooking($data, $userId, $parkingSpot, $parkingLot)
+    {
+        $startDate = Carbon::parse($data['start_at'])->toDateString();
 
-    return ParkingBook::create([
-      ...$data,
-      'user_id' => $user_id,
-      'booked_by' => $user_id,
-      'booked_at' => Carbon::now()
-    ]);
-  }
+        $alreadyBooked = ParkingBook::where('user_id', $userId)
+            ->whereIn('status', ['booked', 'active'])
+            ->whereDate('start_at', $startDate)
+            ->exists();
 
-  public function getParkingHistory($request)
-  {
-    $perPage = $request->input('perPage', 10);
-    $limit = $request->input('limit', '');
+        if ($alreadyBooked) {
+            throw new RuntimeException('You already booked on that day!');
+        }
 
-    $user_id = Auth::id();
-    
-    $parkingBooks = ParkingBook::with(['parkingSpot.parkingLot'])->where('user_id', $user_id);
-    if(!empty($limit)) {
-      return GetParkingBookResource::collection($parkingBooks->limit($limit)->get());
+        $parkingSpot->update(['status' => 'reserved']);
+        $parkingLot->decrement('available_spots');
+
+        return ParkingBook::create([
+            ...$data,
+            'user_id'    => $userId,
+            'booked_by'  => $userId,
+            'booked_at'  => now(),
+            'expired_at' => Carbon::parse($data['start_at'])->addMinutes(20),
+            'status'     => 'booked',
+        ]);
     }
 
-    return GetParkingBookResource::collection($parkingBooks->paginate($perPage))->response()->getData(true);
-  }
+    public function getParkingHistory($request)
+    {
+        $userId  = Auth::id();
+        $perPage = $request->input('perPage', 10);
+        $limit   = $request->input('limit');
 
-  public function checkout($id) {
-    $parkingBook = ParkingBook::findOrFail($id);
-    $parkingSpot = ParkingSpot::findOrFail($parkingBook->parking_spot_id);
-    $parkingLot = ParkingLot::findOrFail($parkingSpot->parking_lot_id);
+        $query = ParkingBook::with('parkingSpot.parkingLot')
+            ->where('user_id', $userId)
+            ->latest();
 
-    if($parkingBook->status !== 'active') {
-      throw new RuntimeException('You already checked out or book cancelled');
+        if ($limit) {
+            return GetParkingBookResource::collection(
+                $query->limit($limit)->get()
+            );
+        }
+
+        return GetParkingBookResource::collection(
+            $query->paginate($perPage)
+        )->response()->getData(true);
     }
 
-    $parkingBook->update(['status' => 'completed', 'checked_at' => Carbon::now()->format('Y-m-d H:i:s')]);
-    $parkingSpot->update(['status' => 'available']);
-    $parkingLot->update(['available_spots' => $parkingLot->available_spots + 1]);
+    public function checkout(int $id)
+    {
+        $parkingBook = ParkingBook::findOrFail($id);
 
-    return $parkingBook;
-  }
+        if ($parkingBook->status !== 'active') {
+            throw new RuntimeException('You already checked out or booking is inactive');
+        }
+
+        $parkingSpot = ParkingSpot::findOrFail($parkingBook->parking_spot_id);
+        $parkingLot  = ParkingLot::findOrFail($parkingSpot->parking_lot_id);
+
+        $parkingBook->update([
+            'status'     => 'completed',
+            'checkout_at' => now(),
+        ]);
+
+        $parkingSpot->update(['status' => 'available']);
+        $parkingLot->increment('available_spots');
+
+        return $parkingBook;
+    }
 }

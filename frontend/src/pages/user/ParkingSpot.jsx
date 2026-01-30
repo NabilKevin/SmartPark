@@ -125,12 +125,15 @@ export default function ParkingSpot() {
     try {
       const response = await getParkingSpots({search, perPage, page, filterStatus, id})
       if(response.status === 200) {
-        const {summary, parkingSpot} = response.data.data
-        setParkingSpots(parkingSpot.data)
-        setTotalPage(parkingSpot.last_page)
+        const {summary, parkingSpots} = response.data.data
+        
+        setParkingSpots(parkingSpots.data)
+        setTotalPage(parkingSpots.last_page)
         setSummary(summary)
       }
     } catch(err) {
+      console.log(err);
+      
       toggleAlert('Error', err?.response.data.message, 'danger')
     } finally {
       setLoading(false)

@@ -20,5 +20,7 @@ function formatDuration($seconds)
         $parts[] = $interval->minutes . ' menit';
     }
 
+    $parts[] = round($interval->seconds, 2) . ' detik';
+
     return implode(' ', $parts);
 }

@@ -3,7 +3,6 @@
 use App\Http\Controllers\Authentication;
 use App\Http\Controllers\Dashboard;
 use App\Http\Controllers\User;
-use App\Http\Controllers\Dashboard\ParkingBook;
 use App\Http\Controllers\Dashboard\Summary;
 use App\Http\Middleware\isAdmin;
 use App\Http\Middleware\isUser;
@@ -52,12 +51,9 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::get('/', [Dashboard\User\Get::class, 'index']);
             });
             Route::prefix('parking-books')->group(function () {
-                Route::post('/', [ParkingBook\Post::class, 'store']);
-                Route::post('/relocate', [ParkingBook\Post::class, 'relocateBooking']);
-                Route::post('/cancel', [ParkingBook\Post::class, 'cancelBooking']);
-                // Route::put('/{id}', [Dashboard\ParkingBook\Put::class, 'update']);
-                // Route::delete('/{id}', [Dashboard\ParkingBook\Delete::class, 'destroy']);
-                // Route::get('/', [Dashboard\ParkingBook\Get::class, 'index']);
+                Route::post('/', [Dashboard\ParkingBook\Post::class, 'store']);
+                Route::post('/relocate', [Dashboard\ParkingBook\Post::class, 'relocateBooking']);
+                Route::post('/cancel', [Dashboard\ParkingBook\Post::class, 'cancelBooking']);
             });
         });
     });

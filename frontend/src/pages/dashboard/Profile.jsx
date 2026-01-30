@@ -79,14 +79,12 @@ function Profile() {
         {
           name: "password",
           placeholder: "Password...",
-          required: true,
           label: "Password",
           type: 'password'
         },
         {
           name: "password_confirmation",
           placeholder: "Password...",
-          required: true,
           label: "Password Confirmation",
           type: 'password'
         },

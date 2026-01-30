@@ -1,0 +1,80 @@
+name: Dashboard
+description: ''
+endpoints:
+  -
+    custom: []
+    httpMethods:
+      - GET
+    uri: api/dashboard/summary
+    metadata:
+      custom: []
+      groupName: Dashboard
+      groupDescription: ''
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Dashboard Summary'
+      description: |-
+        Mengambil ringkasan data dashboard seperti:
+        - Total user
+        - Jumlah booking aktif
+        - Statistik parking lot & parking spot
+        - Persentase okupansi, tersedia, dan rusak
+      authenticated: true
+      deprecated: false
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters: []
+    cleanBodyParameters: []
+    fileParameters: []
+    responses:
+      -
+        custom: []
+        status: 200
+        content: |-
+          {
+            "status": true,
+            "message": "Dashboard summary retrieved successfully",
+            "data": {
+              "totalUsers": 120,
+              "activeBookings": 15,
+              "totalParkingLots": 3,
+              "occupancyRate": 45.5,
+              "availableRate": 48.0,
+              "brokenRate": 6.5,
+              "lotOccupancy": [
+                {
+                  "name": "Basement A",
+                  "available": 20,
+                  "occupied": 25,
+                  "broken": 5
+                },
+                {
+                  "name": "Outdoor Area",
+                  "available": 10,
+                  "occupied": 8,
+                  "broken": 2
+                }
+              ]
+            }
+          }
+        headers: []
+        description: ''
+      -
+        custom: []
+        status: 401
+        content: |-
+          {
+            "message": "Unauthenticated."
+          }
+        headers: []
+        description: ''
+    responseFields: []
+    auth: []
+    controller: null
+    method: null
+    route: null

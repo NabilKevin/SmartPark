@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
-import { adminRoutes } from './routes'
+import { adminRoutes, userRoutes } from './routes'
 import authRoutes from './routes/public/authentication'
 import { Loading } from './components'
 import { me } from './services/dashboard/UserService'
@@ -17,16 +17,18 @@ function App() {
     let isAuthorize = false
     if(user.role === 'admin') {
       adminRoutes.forEach(route => {
-        if(path.split('?')[0] === route) {
+        if(path.split('?')[0] === route.path) {
           isAuthorize = true
         }
       })
+      
       if(!isAuthorize) {
         navigate('/dashboard')
       }
     } else {
-      authRoutes.forEach(route => {
-        if(path.split('?')[0] === route) {
+      
+      userRoutes.forEach(route => {
+        if(path.split('?')[0] === route.path) {
           isAuthorize = true
         }
       })
@@ -57,7 +59,7 @@ function App() {
     fetchData()
   }, [])
   useEffect(() => {
-    if(Object.keys(user) > 0) {
+    if(Object.keys(user).length > 0) {
       checkAuthorization()
     }
   }, [user])

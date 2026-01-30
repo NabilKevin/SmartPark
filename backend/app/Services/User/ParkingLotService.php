@@ -3,29 +3,35 @@
 namespace App\Services\User;
 
 use App\Models\ParkingLot;
+use Illuminate\Http\Request;
 
 class ParkingLotService
 {
-  public function getParkingLots($request)
+  public function getParkingLots(Request $request)
   {
-    $perPage = $request->input('perPage', 10);
-    $search = $request->input('search', '');
-    $status = $request->input('status', '');
-    $limit = $request->input('limit', '');
-    
-    $parkingLots = ParkingLot::whereLike('name', "%$search%");
+    $perPage = (int) $request->input('perPage', 10);
+    $search  = $request->input('search');
+    $status  = $request->input('status');
+    $limit   = $request->input('limit');
 
-    if(!empty($limit)) {
-      return $parkingLots->limit($limit)->get();
-    }
-    if(!empty($status)) {
-      if($status === 'full') {
-        $parkingLots->where('available_spots', 0);
-      } else {
-        $parkingLots->whereNot('available_spots', 0);
-      }
+    $query = ParkingLot::query();
+
+    if ($search) {
+      $query->whereLike('name', "%{$search}%");
     }
 
-    return $parkingLots->paginate($perPage);
+    if ($status) {
+      match ($status) {
+        'full'  => $query->where('available_spots', 0),
+        'open'  => $query->where('available_spots', '>', 0),
+        default => null,
+      };
+    }
+
+    if ($limit) {
+      return $query->limit((int) $limit)->get();
+    }
+
+    return $query->paginate($perPage);
   }
 }
